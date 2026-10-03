@@ -154,10 +154,20 @@ export function AuthWizard({ onLogin }: { onLogin: () => void }) {
     }, []);
 
     const saveCredentials = async () => {
-        await invoke('cmd_store_api_hash', { apiHash });
         const store = await load('config.json');
+
         await store.set('api_id', apiId);
-        await store.delete('api_hash');
+
+        try {
+            await invoke('cmd_store_api_hash', { apiHash });
+            await store.delete('api_hash');
+        } catch {
+            // TELEGRAM_DRIVE_PUBLIC_ANDROID_FALLBACK
+            // La versión pública no incluye los Android native overrides.
+            // Guardar dentro del sandbox privado de esta aplicación.
+            await store.set('api_hash', apiHash);
+        }
+
         await store.save();
     };
 

@@ -60,12 +60,6 @@ jobs:
           CI: true
         run: npm run tauri -- android init --ci
 
-      - name: Aplicar Android overrides y verificar JNI
-        working-directory: app
-        run: |
-          node scripts/apply-android-overrides.cjs
-          node scripts/check-android-jni-contract.cjs
-
       - name: Crear app Android independiente
         working-directory: app
         run: |
