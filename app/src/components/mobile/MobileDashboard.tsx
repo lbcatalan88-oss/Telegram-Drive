@@ -859,9 +859,9 @@ export default function MobileDashboard({ onLogout }: { onLogout?: () => void })
   }, [activeFolderId, activeTab, bulkShareLinks, folderActionMenu, isAndroid, isSidebarOpen, pdfFile, playingFile, previewFile, renameFolder, selectedIds.length, setActiveFolderId, shareFile, showHelp, supporterOfferTrigger]);
 
   return (
-    <div className={`absolute inset-0 flex flex-col bg-telegram-bg text-telegram-text overflow-hidden select-none font-sans ${isTelevision ? 'tv-shell' : ''}`}>
+    <div className={`fmplus-shell absolute inset-0 flex flex-col bg-telegram-bg text-telegram-text overflow-hidden select-none font-sans ${isTelevision ? 'tv-shell' : ''}`}>
       {/* Premium Gradient Top Header */}
-      <header className="flex items-center justify-between px-5 pb-4 pt-[calc(1rem+env(safe-area-inset-top,24px))] bg-gradient-to-r from-telegram-hover/40 to-telegram-bg border-b border-telegram-border/60 shadow-lg backdrop-blur-md sticky top-0 z-40 md:ml-[280px]">
+      <header className="fmplus-topbar flex items-center justify-between px-5 pb-4 pt-[calc(1rem+env(safe-area-inset-top,24px))] bg-gradient-to-r from-telegram-hover/40 to-telegram-bg border-b border-telegram-border/60 shadow-lg backdrop-blur-md sticky top-0 z-40 md:ml-[280px]">
         <div className="flex items-center gap-3">
           <img src="/logo.svg" className="w-8 h-8 drop-shadow-lg" alt="Logo" />
           <div>
@@ -881,11 +881,11 @@ export default function MobileDashboard({ onLogout }: { onLogout?: () => void })
       </header>
 
       {/* Main Viewport Container */}
-      <main ref={scrollRootRef} className="flex-1 overflow-y-auto px-4 py-3 space-y-4 pb-40 scroll-smooth md:ml-[280px] md:px-8 lg:px-12">
+      <main ref={scrollRootRef} className="fmplus-main flex-1 overflow-y-auto px-4 py-3 space-y-4 pb-40 scroll-smooth md:ml-[280px] md:px-8 lg:px-12">
         {activeTab === 'files' && (
           <div className="space-y-4">
             {/* Folder Header Breadcrumb */}
-            <div className="flex items-center justify-between bg-telegram-hover/20 p-3 rounded-2xl border border-telegram-border/30">
+            <div className="fmplus-breadcrumb flex items-center justify-between bg-telegram-hover/20 p-3 rounded-2xl border border-telegram-border/30">
               <div className="flex items-center gap-2.5">
                 <Folder className="w-5 h-5 text-telegram-primary" />
                 <span className="text-sm font-semibold truncate max-w-[150px]">{activeFolder}</span>
@@ -947,7 +947,7 @@ export default function MobileDashboard({ onLogout }: { onLogout?: () => void })
               folders={folders}
               activeFolderId={activeFolderId}
               scrollElementRef={scrollRootRef}
-              disableVirtualization={isTelevision}
+              disableVirtualization={true}
             />
           </div>
         )}

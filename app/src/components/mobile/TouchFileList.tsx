@@ -2,9 +2,79 @@ import { useRef, useState, useCallback, useEffect, useMemo, type RefObject } fro
 import { useVirtualizer, type VirtualItem } from '@tanstack/react-virtual';
 import { DownloadCloud, Trash2, Pencil, CheckSquare, X, Check, FolderInput, MoreVertical, Eye, Link, Copy, Pin, PinOff } from 'lucide-react';
 import { FileTypeIcon } from '../shared/FileTypeIcon';
+import { loadThumbnail, getCachedThumbnail } from '../../services/imagePreviewCache';
 import { ActionPopover, ActionItem } from './ActionPopover';
 import { TelegramFile, TelegramFolder } from '../../types';
 import i18n from '../../i18n';
+
+
+const FMPLUS_IMAGE_EXTS = new Set([
+  'jpg','jpeg','png','webp','gif','bmp'
+]);
+
+function isFmPlusImage(filename: string) {
+  const ext = filename.split('.').pop()?.toLowerCase() || '';
+  return FMPLUS_IMAGE_EXTS.has(ext);
+}
+
+function FileManagerThumbnail({
+  file,
+  folderId,
+}: {
+  file: TelegramFile;
+  folderId: number | null;
+}) {
+  const realFolderId = file.folder_id ?? folderId;
+
+  const [src, setSrc] = useState<string | null>(() =>
+    isFmPlusImage(file.name)
+      ? getCachedThumbnail(file.id, realFolderId)
+      : null
+  );
+
+  useEffect(() => {
+    let alive = true;
+
+    if (!isFmPlusImage(file.name)) {
+      setSrc(null);
+      return;
+    }
+
+    const cached = getCachedThumbnail(file.id, realFolderId);
+
+    if (cached) {
+      setSrc(cached);
+      return;
+    }
+
+    loadThumbnail(file.id, realFolderId)
+      .then(value => {
+        if (alive && value) setSrc(value);
+      })
+      .catch(() => {});
+
+    return () => {
+      alive = false;
+    };
+  }, [file.id, file.name, realFolderId]);
+
+  if (src) {
+    return (
+      <img
+        src={src}
+        alt={file.name}
+        className="fmplus-real-thumb"
+        loading="lazy"
+      />
+    );
+  }
+
+  return (
+    <div className="fmplus-icon-thumb">
+      <FileTypeIcon filename={file.name} size="lg" />
+    </div>
+  );
+}
 
 interface TouchFileListProps {
   files: TelegramFile[];
@@ -210,11 +280,11 @@ export function TouchFileList({ files, isLoading, onDownload, onDelete, onPrevie
           width: '100%',
           transform: `translateY(${virtualRow.start - scrollMargin}px)`,
         } : undefined}
-        className={`flex items-center justify-between p-3.5 rounded-2xl bg-telegram-hover/15 border transition-all duration-200 cursor-pointer active:bg-telegram-hover/35 ${
+        className={`fmplus-file flex items-center justify-between p-3.5 rounded-2xl bg-telegram-hover/15 border transition-all duration-200 cursor-pointer active:bg-telegram-hover/35 ${
           isSelected ? 'border-telegram-primary/50 bg-telegram-primary/10' : 'border-telegram-border/20'
         }`}
       >
-        <div className="flex items-center gap-3.5 min-w-0">
+        <div className="fmplus-file-main min-w-0">
           {isSelectionActive && (
             <div className={`flex-shrink-0 w-5 h-5 rounded-md border-2 flex items-center justify-center transition-all duration-200 ${
               isSelected
@@ -224,12 +294,15 @@ export function TouchFileList({ files, isLoading, onDownload, onDelete, onPrevie
               {isSelected && <Check className="w-3.5 h-3.5" />}
             </div>
           )}
-          <div className="flex-shrink-0">
-            <FileTypeIcon filename={file.name} />
+          <div className="fmplus-thumb">
+            <FileManagerThumbnail
+              file={file}
+              folderId={activeFolderId}
+            />
           </div>
-          <div className="min-w-0">
-            <p className="text-xs font-semibold text-telegram-text truncate max-w-[150px] leading-snug">{file.name}</p>
-            <div className="flex items-center gap-2 mt-1">
+          <div className="fmplus-info min-w-0">
+            <p className="fmplus-name text-xs font-semibold text-telegram-text truncate leading-snug">{file.name}</p>
+            <div className="fmplus-meta flex items-center gap-2 mt-1">
               <span className="text-[10px] text-telegram-subtext/80 font-medium font-mono">{file.sizeStr}</span>
               <span className="w-1 h-1 bg-telegram-border rounded-full" />
               <span className="text-[10px] text-telegram-subtext/80 font-medium">{file.created_at || 'Sync'}</span>
@@ -244,7 +317,7 @@ export function TouchFileList({ files, isLoading, onDownload, onDelete, onPrevie
               e.stopPropagation();
               setActionMenuFile(file);
             }}
-            className="flex-shrink-0 p-2 rounded-xl hover:bg-telegram-hover/40 active:bg-telegram-hover/60 text-telegram-subtext/60 hover:text-telegram-subtext transition-all duration-200"
+            className="fmplus-menu flex-shrink-0 p-2 rounded-xl hover:bg-telegram-hover/40 active:bg-telegram-hover/60 text-telegram-subtext/60 hover:text-telegram-subtext transition-all duration-200"
             aria-label={`Actions for ${file.name}`}
           >
             <MoreVertical className="w-4 h-4" aria-hidden="true" />
@@ -404,7 +477,7 @@ export function TouchFileList({ files, isLoading, onDownload, onDelete, onPrevie
           {/* File list — no more swipeable list, just tap-friendly rows with ⋮ menu */}
           <div
             ref={listRef}
-            className={disableVirtualization ? 'space-y-2.5' : 'relative'}
+            className={disableVirtualization ? 'fmplus-grid' : 'relative'}
             style={disableVirtualization ? undefined : { height: `${rowVirtualizer.getTotalSize()}px` }}
           >
             {disableVirtualization
