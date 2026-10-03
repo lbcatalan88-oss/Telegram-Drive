@@ -11,9 +11,9 @@
       "pubkey": "dW50cnVzdGVkIGNvbW1lbnQ6IG1pbmlzaWduIHB1YmxpYyBrZXk6IDUwN0I3MDBFMzQ5Nzk2M0MKUldROGxwYzBEbkI3VUwwOE13MURPOUtGWWVNTGNkaFZ3WEg0MHFoR0JMSlVjNXBwYksxWEhNMkoK"
     }
   },
-  "productName": "Telegram Drive",
+  "productName": "Telegram Drive +",
   "version": "3.9.8",
-  "identifier": "com.cameronamer.telegramdrive",
+  "identifier": "com.telegramdrive.filemanagerplus",
   "build": {
     "beforeDevCommand": "npm run dev",
     "devUrl": "http://localhost:1420",
@@ -23,7 +23,7 @@
   "app": {
     "windows": [
       {
-        "title": "Telegram Drive",
+        "title": "Telegram Drive +",
         "width": 1200,
         "height": 800,
         "minWidth": 1000,
