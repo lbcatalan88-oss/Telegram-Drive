@@ -64,7 +64,7 @@ jobs:
         working-directory: app
         env:
           CI: true
-        run: npm run tauri -- android build --apk --target aarch64
+        run: npm run tauri -- android build --debug --target aarch64 --apk true --ci
 
       - name: Buscar APK
         run: |
