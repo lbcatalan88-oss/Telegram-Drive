@@ -60,6 +60,27 @@ jobs:
           CI: true
         run: npm run tauri -- android init --ci
 
+      - name: Crear app Android independiente
+        working-directory: app
+        run: |
+          python <<'PY2'
+          from pathlib import Path
+
+          p = Path("src-tauri/gen/android/app/build.gradle.kts")
+          s = p.read_text()
+
+          old = 'applicationId = "com.cameronamer.telegramdrive"'
+          new = 'applicationId = "com.telegramdrive.filemanagerplus"'
+
+          if old not in s:
+              raise SystemExit("No encontré applicationId original")
+
+          p.write_text(s.replace(old, new, 1))
+
+          print("✅ Namespace JNI: com.cameronamer.telegramdrive")
+          print("✅ App instalada: com.telegramdrive.filemanagerplus")
+          PY2
+
       - name: Compilar APK
         working-directory: app
         env:
