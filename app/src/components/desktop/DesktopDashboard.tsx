@@ -1,3 +1,4 @@
+import { UploadLiveCard } from '../mobile/UploadLiveCard';
 import { sourceFolder } from '../../services/fileIdentity';
 import { lazy, useState, useEffect, useCallback, useMemo, useRef } from 'react';
 import { ORGANIZE_FILES_EVENT } from '../../services/workspace';
@@ -848,6 +849,8 @@ export function Dashboard({ onLogout }: { onLogout: () => void }) {
             />
 
             <main className="flex min-w-0 flex-1 flex-col">
+                {/* CEDOC_UPLOAD_LIVE_REAL */}
+                <UploadLiveCard />
                 <div className="desktop-chrome-row justify-end"><button type="button" onClick={() => setWorkspaceKeys([])} className="quiet-control flex h-8 items-center gap-2 px-3 text-ui font-medium text-app-accent hover:bg-app-hover"><Files className="h-4 w-4" />{t('workspace.title')}</button></div>
                 <TopBar
                     currentFolderName={currentViewName}

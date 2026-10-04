@@ -1,94 +1,183 @@
-import { useEffect, useMemo, useState } from 'react';
 import {
-  Activity,
-  ChevronDown,
-  ChevronUp,
-  CloudUpload,
-  FolderOpen,
-  UploadCloud,
-} from 'lucide-react';
+  useEffect,
+  useMemo,
+  useState
+} from 'react';
 
-interface RemoteUpload {
-  id: string;
-  name: string;
+type UploadLike = {
+  id?: string;
+  name?: string;
   path?: string;
-  status: string;
-  progress: number;
-  uploaded_bytes: number;
-  total_bytes: number;
-  speed: number;
+  status?: string;
+  progress?: number;
+  uploaded_bytes?: number;
+  total_bytes?: number;
+  speed?: number;
+};
+
+type LiveStatus = {
+  ok?: boolean;
+  percentage?: number;
+  uploaded_count?: number;
+  active_count?: number;
+  speed?: number;
+  active?: UploadLike[];
+};
+
+interface UploadLiveCardProps {
+  appUploads?: UploadLike[];
 }
 
-interface StatusResponse {
-  ok: boolean;
-  percentage: number;
-  uploaded_count: number;
-  active_count: number;
-  speed: number;
-  uploaded_bytes: number;
-  total_bytes: number;
-  active: RemoteUpload[];
+const STATUS_URL =
+  'http://127.0.0.1:8787/status';
+
+const THUMB_URL =
+  'http://127.0.0.1:8788/thumb?path=';
+
+function clamp(value: unknown) {
+  const n = Number(value ?? 0);
+
+  if (!Number.isFinite(n)) return 0;
+
+  return Math.max(
+    0,
+    Math.min(100, n)
+  );
 }
 
-interface Props {
-  appUploads?: any[];
+function filename(item: UploadLike) {
+  return (
+    item.name ||
+    item.path?.split('/').pop() ||
+    'Archivo'
+  );
 }
 
-function bytes(value: number): string {
-  const n = Number(value || 0);
+function iconFor(name: string) {
+  const ext =
+    name.split('.').pop()?.toLowerCase() || '';
 
-  if (n < 1024) return `${Math.round(n)} B`;
-  if (n < 1024 ** 2) return `${(n / 1024).toFixed(1)} KB`;
-  if (n < 1024 ** 3) return `${(n / 1024 ** 2).toFixed(1)} MB`;
-  return `${(n / 1024 ** 3).toFixed(2)} GB`;
+  if (
+    ['jpg','jpeg','png','webp','gif','avif']
+      .includes(ext)
+  ) return '🖼️';
+
+  if (
+    ['mp4','mkv','avi','mov','webm','m4v']
+      .includes(ext)
+  ) return '🎬';
+
+  if (ext === 'pdf') return '📕';
+
+  if (
+    ['cbz','cbr','zip','rar'].includes(ext)
+  ) return '📚';
+
+  return '📄';
 }
 
-const LIVE = new Set([
-  'pending',
-  'uploading',
-  'downloading',
-  'encrypting',
-  'verifying',
-  'paused',
-  'waiting_for_network',
-  'waiting_for_unlock',
-]);
+function Preview({
+  item
+}: {
+  item: UploadLike
+}) {
+  const [failed, setFailed] =
+    useState(false);
 
-export function UploadLiveCard({ appUploads = [] }: Props) {
-  const [remote, setRemote] = useState<StatusResponse | null>(null);
-  const [opened, setOpened] = useState(false);
+  const name = filename(item);
+
+  const src = useMemo(() => {
+    if (!item.path) return '';
+
+    return (
+      THUMB_URL +
+      encodeURIComponent(item.path)
+    );
+  }, [item.path]);
+
+  if (!src || failed) {
+    return (
+      <div
+        style={{
+          width: '100%',
+          aspectRatio: '1 / 1',
+          borderRadius: 14,
+          background:
+            'linear-gradient(145deg,#20242c,#12151b)',
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'center',
+          fontSize: 34
+        }}
+      >
+        {iconFor(name)}
+      </div>
+    );
+  }
+
+  return (
+    <img
+      src={src}
+      alt={name}
+      loading="eager"
+      onError={() => setFailed(true)}
+      style={{
+        width: '100%',
+        aspectRatio: '1 / 1',
+        objectFit: 'cover',
+        borderRadius: 14,
+        background: '#17191f',
+        display: 'block'
+      }}
+    />
+  );
+}
+
+export function UploadLiveCard({
+  appUploads = []
+}: UploadLiveCardProps) {
+  const [live, setLive] =
+    useState<LiveStatus | null>(null);
+
+  const [connected, setConnected] =
+    useState(false);
 
   useEffect(() => {
     let alive = true;
 
-    const update = async () => {
+    const load = async () => {
       try {
         const response = await fetch(
-          'http://127.0.0.1:8787/status',
+          `${STATUS_URL}?t=${Date.now()}`,
           {
-            cache: 'no-store',
-            signal: AbortSignal.timeout(850),
-          },
+            cache: 'no-store'
+          }
         );
 
-        if (!response.ok) return;
+        if (!response.ok) {
+          throw new Error(
+            String(response.status)
+          );
+        }
 
-        const data = await response.json();
+        const json =
+          await response.json();
 
         if (alive) {
-          setRemote(data);
+          setLive(json);
+          setConnected(true);
         }
       } catch {
-        // Termux puede estar dormido o cerrado.
+        if (alive) {
+          setConnected(false);
+        }
       }
     };
 
-    void update();
+    load();
 
-    const timer = window.setInterval(
-      () => void update(),
-      1000,
-    );
+    const timer =
+      window.setInterval(load, 1000);
 
     return () => {
       alive = false;
@@ -96,298 +185,263 @@ export function UploadLiveCard({ appUploads = [] }: Props) {
     };
   }, []);
 
-  const localItems: RemoteUpload[] = useMemo(
-    () =>
-      appUploads
-        .filter((item) => LIVE.has(item.status))
-        .map((item) => {
-          const name =
-            ('filename' in item && item.filename)
-              ? item.filename
-              : (
-                  item.url
-                  || item.path
-                  || 'Archivo'
-                ).split(/[\\/]/).pop() || 'Archivo';
+  const external =
+    Array.isArray(live?.active)
+      ? live!.active!
+      : [];
 
-          return {
-            id: `app:${item.id}`,
-            name,
-            path: item.path || item.url || '',
-            status: item.status,
-            progress: Number(item.progress || 0),
-            uploaded_bytes: Number(item.uploadedBytes || 0),
-            total_bytes: Number(item.totalBytes || 0),
-            speed: Number(item.speedBytesPerSec || 0),
-          };
-        }),
-    [appUploads],
-  );
+  const active =
+    external.length
+      ? external
+      : appUploads.filter(item =>
+          [
+            'pending',
+            'uploading',
+            'downloading',
+            'encrypting',
+            'verifying'
+          ].includes(
+            String(item.status || '')
+          )
+        );
 
-  const items = useMemo(() => {
-    const merged = [
-      ...(remote?.active || []),
-      ...localItems,
-    ];
+  // EXACTAMENTE cuatro tarjetas visibles.
+  const visible =
+    active.slice(0, 4);
 
-    const seen = new Set<string>();
+  const overall =
+    clamp(live?.percentage);
 
-    return merged.filter((item) => {
-      const key = [
-        item.name,
-        item.total_bytes,
-        Math.round(item.progress),
-      ].join('|');
+  const activeCount =
+    Number(
+      live?.active_count ??
+      active.length
+    );
 
-      if (seen.has(key)) return false;
-
-      seen.add(key);
-      return true;
-    });
-  }, [localItems, remote]);
-
-  const percent = useMemo(() => {
-    if (!items.length) {
-      return remote?.uploaded_count ? 100 : 0;
-    }
-
-    const value =
-      items.reduce(
-        (sum, item) =>
-          sum + (
-            item.status === 'success'
-              ? 100
-              : Math.max(
-                  0,
-                  Math.min(
-                    100,
-                    Number(item.progress || 0),
-                  ),
-                )
-          ),
-        0,
-      ) / items.length;
-
-    return Math.round(value);
-  }, [items, remote?.uploaded_count]);
-
-  const speed = items.reduce(
-    (sum, item) => sum + Number(item.speed || 0),
-    0,
-  );
-
-  const uploadedBytes = items.reduce(
-    (sum, item) =>
-      sum + Number(item.uploaded_bytes || 0),
-    0,
-  );
-
-  const totalBytes = items.reduce(
-    (sum, item) =>
-      sum + Number(item.total_bytes || 0),
-    0,
-  );
+  const uploadedCount =
+    Number(
+      live?.uploaded_count ?? 0
+    );
 
   return (
-    <section className="space-y-3">
-
-      {/* Tarjeta principal */}
-      <div className="overflow-hidden rounded-3xl border border-telegram-primary/20 bg-gradient-to-br from-telegram-primary/15 via-telegram-hover/25 to-telegram-bg shadow-lg">
-
-        <div className="p-4">
-
-          <div className="flex items-start justify-between gap-4">
-
-            <div className="flex min-w-0 items-center gap-3">
-
-              <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-2xl bg-telegram-primary/15">
-                <CloudUpload className="h-6 w-6 text-telegram-primary" />
-              </div>
-
-              <div className="min-w-0">
-                <div className="flex items-center gap-2">
-                  <h2 className="text-sm font-bold text-telegram-text">
-                    Telegram Drive
-                  </h2>
-
-                  {items.length > 0 && (
-                    <span className="flex items-center gap-1 rounded-full bg-emerald-500/10 px-2 py-0.5 text-[9px] font-bold uppercase tracking-wider text-emerald-400">
-                      <span className="h-1.5 w-1.5 animate-pulse rounded-full bg-emerald-400" />
-                      En vivo
-                    </span>
-                  )}
-                </div>
-
-                <p className="mt-0.5 text-[10px] text-telegram-subtext">
-                  {(remote?.uploaded_count || 0).toLocaleString('es-CL')} archivos subidos
-                  {' · '}
-                  {items.length} subiendo ahora
-                </p>
-              </div>
-            </div>
-
-            <div className="text-right">
-              <div className="text-2xl font-black tabular-nums text-telegram-primary">
-                {percent}%
-              </div>
-              <div className="text-[9px] font-semibold uppercase tracking-wider text-telegram-subtext">
-                subido
-              </div>
-            </div>
+    <section
+      style={{
+        margin: '12px 12px 16px',
+        padding: 16,
+        borderRadius: 20,
+        background:
+          'rgba(24,27,34,.96)',
+        border:
+          '1px solid rgba(255,255,255,.08)',
+        boxShadow:
+          '0 12px 28px rgba(0,0,0,.22)'
+      }}
+    >
+      <div
+        style={{
+          display: 'flex',
+          justifyContent: 'space-between',
+          alignItems: 'center',
+          gap: 12,
+          marginBottom: 10
+        }}
+      >
+        <div>
+          <div
+            style={{
+              fontSize: 16,
+              fontWeight: 800,
+              color: '#fff'
+            }}
+          >
+            Subiendo ahora
           </div>
 
-          <div className="mt-4 h-2.5 overflow-hidden rounded-full bg-telegram-border/25">
-
-            <div
-              className="h-full rounded-full bg-telegram-primary transition-[width] duration-500"
-              style={{
-                width: `${Math.max(
-                  items.length ? 2 : 0,
-                  percent,
-                )}%`,
-              }}
-            />
+          <div
+            style={{
+              marginTop: 3,
+              fontSize: 12,
+              color: '#9da5b3'
+            }}
+          >
+            {activeCount > 0
+              ? `${activeCount} archivos activos`
+              : 'Sin subidas activas'}
           </div>
+        </div>
 
-          <div className="mt-3 flex items-center justify-between text-[10px] text-telegram-subtext">
-
-            <span>
-              {totalBytes > 0
-                ? `${bytes(uploadedBytes)} / ${bytes(totalBytes)}`
-                : items.length
-                  ? 'Calculando tamaño…'
-                  : 'Todo al día'}
-            </span>
-
-            <span className="flex items-center gap-1 font-mono">
-              <Activity className="h-3 w-3" />
-              {speed > 0
-                ? `${bytes(speed)}/s`
-                : '0 B/s'}
-            </span>
-          </div>
+        <div
+          style={{
+            minWidth: 55,
+            textAlign: 'right',
+            fontSize: 18,
+            fontWeight: 800,
+            color: '#4fa9ff'
+          }}
+        >
+          {Math.round(overall)}%
         </div>
       </div>
 
-      {/* Carpeta virtual */}
-      <button
-        type="button"
-        onClick={() => setOpened((value) => !value)}
-        className="flex w-full items-center gap-3 rounded-2xl border border-telegram-border/30 bg-telegram-hover/20 p-3.5 text-left transition-all active:scale-[0.99]"
+      {/* BARRA GENERAL REAL */}
+      <div
+        style={{
+          width: '100%',
+          height: 9,
+          overflow: 'hidden',
+          borderRadius: 999,
+          background: '#323741',
+          marginBottom: 14
+        }}
       >
-        <div className="relative flex h-11 w-11 shrink-0 items-center justify-center rounded-2xl bg-telegram-primary/10">
+        <div
+          style={{
+            height: '100%',
+            width: `${overall}%`,
+            borderRadius: 999,
+            background:
+              'linear-gradient(90deg,#2997ff,#65bdff)',
+            transition:
+              'width .5s ease'
+          }}
+        />
+      </div>
 
-          <FolderOpen className="h-6 w-6 text-telegram-primary" />
+      {/* 4 IMÁGENES */}
+      <div
+        style={{
+          display: 'grid',
+          gridTemplateColumns:
+            'repeat(2,minmax(0,1fr))',
+          gap: 8
+        }}
+      >
+        {[0,1,2,3].map(index => {
+          const item =
+            visible[index];
 
-          {items.length > 0 && (
-            <span className="absolute -right-1 -top-1 flex min-h-5 min-w-5 items-center justify-center rounded-full bg-telegram-primary px-1 text-[9px] font-black text-black">
-              {items.length}
-            </span>
-          )}
-        </div>
-
-        <div className="min-w-0 flex-1">
-          <p className="text-sm font-bold text-telegram-text">
-            Subiendo ahora
-          </p>
-
-          <p className="text-[10px] text-telegram-subtext">
-            {items.length > 0
-              ? `${items.length} ${items.length === 1 ? 'archivo' : 'archivos'} en tiempo real`
-              : 'Sin transferencias activas'}
-          </p>
-        </div>
-
-        {opened
-          ? <ChevronUp className="h-4 w-4 text-telegram-subtext" />
-          : <ChevronDown className="h-4 w-4 text-telegram-subtext" />
-        }
-      </button>
-
-      {/* Interior de la carpeta */}
-      {opened && (
-        <div className="overflow-hidden rounded-2xl border border-telegram-border/30 bg-telegram-hover/10">
-
-          {items.length === 0 ? (
-            <div className="px-4 py-8 text-center">
-              <UploadCloud className="mx-auto mb-2 h-7 w-7 text-telegram-subtext/40" />
-
-              <p className="text-xs font-semibold text-telegram-text">
-                No hay archivos subiendo
-              </p>
-
-              <p className="mt-1 text-[10px] text-telegram-subtext">
-                Los próximos aparecerán aquí automáticamente.
-              </p>
-            </div>
-          ) : (
-            items.map((item) => (
+          if (!item) {
+            return (
               <div
-                key={item.id}
-                className="border-b border-telegram-border/20 px-4 py-3 last:border-b-0"
+                key={`empty-${index}`}
+                style={{
+                  aspectRatio: '1 / 1',
+                  borderRadius: 14,
+                  background:
+                    'rgba(255,255,255,.035)',
+                  border:
+                    '1px dashed rgba(255,255,255,.08)'
+                }}
+              />
+            );
+          }
+
+          const progress =
+            clamp(item.progress);
+
+          const name =
+            filename(item);
+
+          return (
+            <div
+              key={
+                item.id ||
+                item.path ||
+                `${name}-${index}`
+              }
+              style={{
+                minWidth: 0
+              }}
+            >
+              <div
+                style={{
+                  position: 'relative'
+                }}
               >
-                <div className="flex items-start gap-3">
+                <Preview item={item} />
 
-                  <div className="mt-0.5 flex h-8 w-8 shrink-0 items-center justify-center rounded-xl bg-telegram-primary/10">
-                    <UploadCloud className="h-4 w-4 text-telegram-primary" />
-                  </div>
-
-                  <div className="min-w-0 flex-1">
-
-                    <div className="flex items-center justify-between gap-3">
-
-                      <p className="truncate text-xs font-semibold text-telegram-text">
-                        {item.name}
-                      </p>
-
-                      <span className="shrink-0 text-[11px] font-bold tabular-nums text-telegram-primary">
-                        {Math.round(item.progress || 0)}%
-                      </span>
-                    </div>
-
-                    <div className="mt-1 flex items-center justify-between text-[9px] text-telegram-subtext">
-
-                      <span className="capitalize">
-                        {String(item.status || 'uploading')
-                          .replace(/_/g, ' ')}
-                      </span>
-
-                      <span className="font-mono">
-                        {item.speed > 0
-                          ? `${bytes(item.speed)}/s`
-                          : ''}
-                      </span>
-                    </div>
-
-                    <div className="mt-2 h-1.5 overflow-hidden rounded-full bg-telegram-border/25">
-                      <div
-                        className="h-full rounded-full bg-telegram-primary transition-[width] duration-300"
-                        style={{
-                          width: `${Math.max(
-                            2,
-                            Math.min(
-                              100,
-                              Number(item.progress || 0),
-                            ),
-                          )}%`,
-                        }}
-                      />
-                    </div>
-
-                    {item.total_bytes > 0 && (
-                      <p className="mt-1.5 text-[9px] tabular-nums text-telegram-subtext/70">
-                        {bytes(item.uploaded_bytes)}
-                        {' / '}
-                        {bytes(item.total_bytes)}
-                      </p>
-                    )}
-                  </div>
+                <div
+                  style={{
+                    position: 'absolute',
+                    right: 5,
+                    bottom: 5,
+                    padding:
+                      '3px 6px',
+                    borderRadius: 999,
+                    background:
+                      'rgba(0,0,0,.72)',
+                    color: '#fff',
+                    fontSize: 10,
+                    fontWeight: 700
+                  }}
+                >
+                  {Math.round(progress)}%
                 </div>
               </div>
-            ))
-          )}
-        </div>
-      )}
+
+              {/* BARRA DE CADA ARCHIVO */}
+              <div
+                style={{
+                  marginTop: 6,
+                  height: 4,
+                  overflow: 'hidden',
+                  borderRadius: 999,
+                  background: '#323741'
+                }}
+              >
+                <div
+                  style={{
+                    height: '100%',
+                    width:
+                      `${progress}%`,
+                    background:
+                      '#4fa9ff',
+                    transition:
+                      'width .4s ease'
+                  }}
+                />
+              </div>
+
+              <div
+                title={name}
+                style={{
+                  marginTop: 5,
+                  color: '#dce1e8',
+                  fontSize: 10,
+                  lineHeight: 1.2,
+                  overflow: 'hidden',
+                  textOverflow:
+                    'ellipsis',
+                  whiteSpace: 'nowrap'
+                }}
+              >
+                {name}
+              </div>
+            </div>
+          );
+        })}
+      </div>
+
+      <div
+        style={{
+          marginTop: 12,
+          display: 'flex',
+          justifyContent: 'space-between',
+          fontSize: 11,
+          color: '#9098a5'
+        }}
+      >
+        <span>
+          {connected
+            ? '● Telegram conectado'
+            : '○ Esperando servidor'}
+        </span>
+
+        <span>
+          {uploadedCount.toLocaleString()}
+          {' '}subidos
+        </span>
+      </div>
     </section>
   );
 }
