@@ -15,6 +15,7 @@ import { ActionPopover, ActionItem } from './ActionPopover';
 import { ShareDialog } from '../desktop/dashboard/ShareDialog';
 import { RenameFolderSheet } from './RenameFolderSheet';
 import { MobileSupporterCard } from './MobileSupporterCard';
+import { UploadLiveCard } from './UploadLiveCard';
 import { SupporterOfferDialog } from '../shared/SupporterOfferDialog';
 import { usePlatform } from '../../hooks/usePlatform';
 import { useTelegramConnection } from '../../hooks/useTelegramConnection';
@@ -884,6 +885,7 @@ export default function MobileDashboard({ onLogout }: { onLogout?: () => void })
       <main ref={scrollRootRef} className="fmplus-main flex-1 overflow-y-auto px-4 py-3 space-y-4 pb-40 scroll-smooth md:ml-[280px] md:px-8 lg:px-12">
         {activeTab === 'files' && (
           <div className="space-y-4">
+            <UploadLiveCard appUploads={uploadQueue} />
             {/* Folder Header Breadcrumb */}
             <div className="fmplus-breadcrumb flex items-center justify-between bg-telegram-hover/20 p-3 rounded-2xl border border-telegram-border/30">
               <div className="flex items-center gap-2.5">
