@@ -3,6 +3,8 @@ import type { EncryptionState, FileEncryptionInfo } from './encryption';
 export interface TelegramFile {
   id: number;
   name: string;
+  /** Optional UI-only basename when the stored Telegram name contains a virtual path. */
+  display_name?: string;
   size: number;
   sizeStr: string;
   created_at?: string;

@@ -940,35 +940,37 @@ textarea:disabled {
 /* FILE MANAGER PLUS CUSTOM */
 
 .fmplus-shell {
-  background: #ffffff !important;
+  background: #f6f7f5 !important;
 }
 
 .fmplus-topbar {
-  background: #202020 !important;
+  background: rgba(250,250,247,.96) !important;
   background-image: none !important;
   border: 0 !important;
-  box-shadow: 0 2px 5px rgba(0,0,0,.28) !important;
-  color: white !important;
-  padding-bottom: 11px !important;
+  border-bottom: 1px solid #e8e8e3 !important;
+  box-shadow: 0 4px 18px rgba(22,35,45,.06) !important;
+  color: #202124 !important;
+  padding-bottom: 12px !important;
+  backdrop-filter: blur(18px) !important;
 }
 
 .fmplus-topbar h1 {
-  color: white !important;
+  color: #202124 !important;
   background: none !important;
-  -webkit-text-fill-color: white !important;
+  -webkit-text-fill-color: #202124 !important;
 }
 
 .fmplus-topbar button {
-  border: 0 !important;
-  background: transparent !important;
-  color: white !important;
+  border: 1px solid #e4e7e8 !important;
+  background: rgba(255,255,255,.82) !important;
+  color: #39434a !important;
 }
 
 .fmplus-main {
-  background: #fff !important;
-  padding-left: 8px !important;
-  padding-right: 8px !important;
-  padding-top: 8px !important;
+  background: #f6f7f5 !important;
+  padding-left: 12px !important;
+  padding-right: 12px !important;
+  padding-top: 10px !important;
 }
 
 .fmplus-breadcrumb {
@@ -996,8 +998,8 @@ textarea:disabled {
 
 .fmplus-grid {
   display: grid !important;
-  grid-template-columns: repeat(3, minmax(0,1fr)) !important;
-  gap: 7px !important;
+  grid-template-columns: repeat(2, minmax(0,1fr)) !important;
+  gap: 12px !important;
   align-items: start !important;
   width: 100% !important;
 }
@@ -1006,13 +1008,14 @@ textarea:disabled {
   position: relative !important;
   display: block !important;
   min-width: 0 !important;
-  height: 157px !important;
-  padding: 3px !important;
-  border: 0 !important;
-  border-radius: 2px !important;
+  min-height: 205px !important;
+  height: auto !important;
+  padding: 7px !important;
+  border: 1px solid #e7e9e8 !important;
+  border-radius: 18px !important;
   background: #fff !important;
   overflow: hidden !important;
-  box-shadow: none !important;
+  box-shadow: 0 5px 18px rgba(30,47,60,.07) !important;
 }
 
 .fmplus-file:active {
@@ -1026,11 +1029,12 @@ textarea:disabled {
 
 .fmplus-thumb {
   width: 100% !important;
-  height: 102px !important;
+  height: 145px !important;
   display: flex !important;
   align-items: center !important;
   justify-content: center !important;
-  background: #f1f1f1 !important;
+  background: linear-gradient(145deg,#eef3f5,#f8f9f8) !important;
+  border-radius: 13px !important;
   overflow: hidden !important;
 }
 
@@ -1060,14 +1064,17 @@ textarea:disabled {
 }
 
 .fmplus-name {
-  display: block !important;
+  display: -webkit-box !important;
   max-width: 100% !important;
-  color: #222 !important;
-  font-size: 11px !important;
-  line-height: 14px !important;
-  white-space: nowrap !important;
+  color: #25282a !important;
+  font-size: 12px !important;
+  line-height: 16px !important;
+  font-weight: 700 !important;
+  white-space: normal !important;
   overflow: hidden !important;
   text-overflow: ellipsis !important;
+  -webkit-line-clamp: 2 !important;
+  -webkit-box-orient: vertical !important;
 }
 
 .fmplus-meta {
@@ -1096,15 +1103,226 @@ textarea:disabled {
 
 @media (min-width: 600px) {
   .fmplus-grid {
-    grid-template-columns: repeat(5, minmax(0,1fr)) !important;
+    grid-template-columns: repeat(3, minmax(0,1fr)) !important;
   }
 
   .fmplus-file {
-    height: 190px !important;
+    min-height: 230px !important;
   }
 
   .fmplus-thumb {
-    height: 135px !important;
+    height: 168px !important;
   }
 }
 
+
+/* VISUAL VIRTUAL FOLDERS */
+.fmplus-virtual-browser {
+  display: grid;
+  gap: 12px;
+}
+
+.fmplus-pathbar {
+  display: flex;
+  align-items: center;
+  gap: 5px;
+  min-width: 0;
+  overflow-x: auto;
+  padding: 8px 2px 2px;
+  scrollbar-width: none;
+}
+
+.fmplus-pathbar::-webkit-scrollbar {
+  display: none;
+}
+
+.fmplus-path-home,
+.fmplus-path-back,
+.fmplus-path-part button {
+  min-height: 36px;
+  border: 0;
+  border-radius: 11px;
+  background: transparent;
+  color: #3c4449;
+  font-size: 12px;
+  font-weight: 700;
+  white-space: nowrap;
+}
+
+.fmplus-path-home,
+.fmplus-path-back {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 0 10px;
+}
+
+.fmplus-path-home {
+  background: #eaf5f9;
+  color: #167fa6;
+}
+
+.fmplus-path-home svg,
+.fmplus-path-back svg,
+.fmplus-path-part svg {
+  width: 15px;
+  height: 15px;
+}
+
+.fmplus-path-part {
+  display: inline-flex;
+  align-items: center;
+  color: #a0a7aa;
+}
+
+.fmplus-path-part button {
+  padding: 0 7px;
+}
+
+.fmplus-folder-section-title {
+  display: flex;
+  align-items: end;
+  justify-content: space-between;
+  margin: 3px 2px 9px;
+}
+
+.fmplus-folder-section-title > div {
+  display: grid;
+  gap: 2px;
+}
+
+.fmplus-folder-section-title strong {
+  color: #202426;
+  font-size: 14px;
+}
+
+.fmplus-folder-section-title span {
+  color: #7a8388;
+  font-size: 10px;
+}
+
+.fmplus-folder-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 10px;
+}
+
+.fmplus-folder-card {
+  position: relative;
+  display: grid;
+  grid-template-rows: 76px auto;
+  min-width: 0;
+  overflow: hidden;
+  border: 1px solid #e4e8e8;
+  border-radius: 18px;
+  background: #fff;
+  text-align: left;
+  box-shadow: 0 5px 18px rgba(29, 47, 59, .065);
+  transition: transform .14s ease, box-shadow .14s ease, border-color .14s ease;
+}
+
+.fmplus-folder-card:active {
+  transform: scale(.985);
+  border-color: #b9ddea;
+  box-shadow: 0 2px 8px rgba(29, 47, 59, .07);
+}
+
+.fmplus-folder-visual {
+  position: relative;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  overflow: hidden;
+  background:
+    radial-gradient(circle at 20% 10%, rgba(255,255,255,.92), transparent 35%),
+    linear-gradient(145deg, #dff1f7, #edf5f3 58%, #f8f8ef);
+}
+
+.fmplus-folder-visual::after {
+  content: "";
+  position: absolute;
+  inset: auto 14px 11px;
+  height: 9px;
+  border-radius: 999px;
+  background: rgba(22,138,195,.1);
+}
+
+.fmplus-folder-emoji {
+  position: relative;
+  z-index: 2;
+  font-size: 38px;
+  line-height: 1;
+  filter: drop-shadow(0 4px 8px rgba(0,0,0,.08));
+}
+
+.fmplus-folder-tab {
+  position: absolute;
+  left: 18px;
+  top: 12px;
+  width: 34px;
+  height: 9px;
+  border-radius: 7px 7px 2px 2px;
+  background: rgba(22,138,195,.15);
+}
+
+.fmplus-folder-copy {
+  display: grid;
+  gap: 4px;
+  min-width: 0;
+  padding: 10px 31px 11px 11px;
+}
+
+.fmplus-folder-copy strong {
+  overflow: hidden;
+  color: #23282b;
+  font-size: 12px;
+  line-height: 16px;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.fmplus-folder-copy > span {
+  color: #727d82;
+  font-size: 9px;
+  font-weight: 600;
+}
+
+.fmplus-folder-kinds {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px;
+  min-height: 17px;
+}
+
+.fmplus-folder-kinds em {
+  border-radius: 999px;
+  background: #f1f4f4;
+  color: #667177;
+  padding: 2px 6px;
+  font-size: 8px;
+  font-style: normal;
+  font-weight: 700;
+}
+
+.fmplus-folder-chevron {
+  position: absolute;
+  right: 9px;
+  bottom: 12px;
+  width: 16px;
+  height: 16px;
+  color: #93a0a5;
+}
+
+@media (min-width: 600px) {
+  .fmplus-folder-grid {
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+  }
+
+  .fmplus-folder-card {
+    grid-template-rows: 92px auto;
+  }
+
+  .fmplus-folder-emoji {
+    font-size: 44px;
+  }
+}

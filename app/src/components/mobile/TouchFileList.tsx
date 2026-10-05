@@ -62,7 +62,7 @@ function FileManagerThumbnail({
     return (
       <img
         src={src}
-        alt={file.name}
+        alt={file.display_name || file.name}
         className="fmplus-real-thumb"
         loading="lazy"
       />
@@ -301,7 +301,7 @@ export function TouchFileList({ files, isLoading, onDownload, onDelete, onPrevie
             />
           </div>
           <div className="fmplus-info min-w-0">
-            <p className="fmplus-name text-xs font-semibold text-telegram-text truncate leading-snug">{file.name}</p>
+            <p className="fmplus-name text-xs font-semibold text-telegram-text truncate leading-snug">{file.display_name || file.name}</p>
             <div className="fmplus-meta flex items-center gap-2 mt-1">
               <span className="text-[10px] text-telegram-subtext/80 font-medium font-mono">{file.sizeStr}</span>
               <span className="w-1 h-1 bg-telegram-border rounded-full" />
@@ -318,7 +318,7 @@ export function TouchFileList({ files, isLoading, onDownload, onDelete, onPrevie
               setActionMenuFile(file);
             }}
             className="fmplus-menu flex-shrink-0 p-2 rounded-xl hover:bg-telegram-hover/40 active:bg-telegram-hover/60 text-telegram-subtext/60 hover:text-telegram-subtext transition-all duration-200"
-            aria-label={`Actions for ${file.name}`}
+            aria-label={`Actions for ${file.display_name || file.name}`}
           >
             <MoreVertical className="w-4 h-4" aria-hidden="true" />
           </button>
@@ -491,7 +491,7 @@ export function TouchFileList({ files, isLoading, onDownload, onDelete, onPrevie
       {/* Action popover for file operations */}
       {actionMenuFile && (
         <ActionPopover
-          title={actionMenuFile.name}
+          title={actionMenuFile.display_name || actionMenuFile.name}
           actions={buildFileActions(actionMenuFile)}
           onClose={() => setActionMenuFile(null)}
         />

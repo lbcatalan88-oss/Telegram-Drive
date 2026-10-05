@@ -8,6 +8,7 @@ import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { toast } from 'sonner';
 import { BottomNavBar } from './BottomNavBar';
 import { TouchFileList } from './TouchFileList';
+import { VisualFolderBrowser, getVirtualFolderView } from './VisualFolderBrowser';
 import { ThemeToggle } from '../shared/ThemeToggle';
 import AdsterraBanner from '../shared/AdsterraBanner';
 import { DriveConceptTour } from '../desktop/dashboard/DriveConceptTour';
@@ -563,11 +564,17 @@ export default function MobileDashboard({ onLogout }: { onLogout?: () => void })
 
   const [selectedIds, setSelectedIds] = useState<number[]>([]);
   const [fileRenames, setFileRenames] = useState<Map<number, string>>(new Map());
+  const [virtualPath, setVirtualPath] = useState<string[]>([]);
   const { handleDelete: handleDeleteOp, handleBulkDelete, handleBulkDownload, handleBulkMove } = useFileOperations(activeFolderId, selectedIds, setSelectedIds, allFiles, queueBulkDownload);
 
   const activeFolder = activeFolderId === null
     ? 'Saved Messages'
     : folders.find(f => f.id === activeFolderId)?.name || 'Unknown Channel';
+
+  useEffect(() => {
+    setVirtualPath([]);
+    setSelectedIds([]);
+  }, [activeFolderId]);
 
   // Folder action menu state (replaces swipe-to-reveal)
   const [folderActionMenu, setFolderActionMenu] = useState<TelegramFolder | null>(null);
@@ -683,14 +690,6 @@ export default function MobileDashboard({ onLogout }: { onLogout?: () => void })
       },
     ];
   }, [handleFolderDelete, handleFolderVisibilityToggle, handleFolderShareInvite]);
-
-  const handleSelectAll = useCallback(() => {
-    if (selectedIds.length === allFiles.length) {
-      setSelectedIds([]);
-    } else {
-      setSelectedIds(allFiles.map(f => f.id));
-    }
-  }, [selectedIds.length, allFiles]);
 
   const handleClearSelection = useCallback(() => setSelectedIds([]), []);
 
@@ -837,6 +836,21 @@ export default function MobileDashboard({ onLogout }: { onLogout?: () => void })
     );
   }, [allFiles, fileRenames]);
 
+  const virtualView = useMemo(
+    () => getVirtualFolderView(displayFiles, virtualPath),
+    [displayFiles, virtualPath],
+  );
+
+  const handleSelectVisible = useCallback(() => {
+    const visibleIds = virtualView.files.map(file => file.id);
+    const allVisibleSelected = visibleIds.length > 0 && visibleIds.every(id => selectedIds.includes(id));
+    if (allVisibleSelected) {
+      setSelectedIds(current => current.filter(id => !visibleIds.includes(id)));
+    } else {
+      setSelectedIds(current => Array.from(new Set([...current, ...visibleIds])));
+    }
+  }, [selectedIds, virtualView.files]);
+
   useEffect(() => {
     if (!isAndroid) return;
     const androidWindow = window as typeof window & { __telegramDriveHandleAndroidBack?: () => boolean };
@@ -852,12 +866,13 @@ export default function MobileDashboard({ onLogout }: { onLogout?: () => void })
       if (renameFolder) { setRenameFolder(null); return true; }
       if (isSidebarOpen) { setIsSidebarOpen(false); return true; }
       if (selectedIds.length > 0) { setSelectedIds([]); return true; }
+      if (virtualPath.length > 0) { setVirtualPath(current => current.slice(0, -1)); return true; }
       if (activeTab !== 'files') { setActiveTab('files'); return true; }
       if (activeFolderId !== null) { setActiveFolderId(null); return true; }
       return false;
     };
     return () => { delete androidWindow.__telegramDriveHandleAndroidBack; };
-  }, [activeFolderId, activeTab, bulkShareLinks, folderActionMenu, isAndroid, isSidebarOpen, pdfFile, playingFile, previewFile, renameFolder, selectedIds.length, setActiveFolderId, shareFile, showHelp, supporterOfferTrigger]);
+  }, [activeFolderId, activeTab, bulkShareLinks, folderActionMenu, isAndroid, isSidebarOpen, pdfFile, playingFile, previewFile, renameFolder, selectedIds.length, setActiveFolderId, shareFile, showHelp, supporterOfferTrigger, virtualPath.length]);
 
   return (
     <div className={`fmplus-shell absolute inset-0 flex flex-col bg-telegram-bg text-telegram-text overflow-hidden select-none font-sans ${isTelevision ? 'tv-shell' : ''}`}>
@@ -911,7 +926,17 @@ export default function MobileDashboard({ onLogout }: { onLogout?: () => void })
               </div>
             </div>
 
-            {continueWatching.length > 0 && (
+            <VisualFolderBrowser
+              currentPath={virtualPath}
+              folders={virtualView.folders}
+              onPathChange={(path) => {
+                setSelectedIds([]);
+                setVirtualPath(path);
+                scrollRootRef.current?.scrollTo({ top: 0, behavior: 'smooth' });
+              }}
+            />
+
+            {continueWatching.length > 0 && virtualPath.length === 0 && (
               <section className="rounded-2xl border border-telegram-border/30 bg-telegram-hover/20 p-3" aria-labelledby="continue-watching-title">
                 <h2 id="continue-watching-title" className="mb-2 text-[10px] font-bold uppercase tracking-wide text-telegram-primary">Continue watching</h2>
                 <div className="flex gap-2 overflow-x-auto pb-1">
@@ -926,31 +951,33 @@ export default function MobileDashboard({ onLogout }: { onLogout?: () => void })
               </section>
             )}
 
-            {/* Dynamic Real File List */}
-            <TouchFileList
-              files={displayFiles}
-              isLoading={isLoading && allFiles.length === 0}
-              onDownload={handleDownload}
-              onDelete={handleDeleteFile}
-              onPreview={handlePreview}
-              onRename={handleRenameFile}
-              onShare={setShareFile}
-              onCopyTelegramLink={handleCopyTelegramLink}
-              onKeepOffline={handleKeepOffline}
-              onRemoveOffline={handleRemoveOffline}
-              onBulkShare={handleBulkShare}
-              selectedIds={selectedIds}
-              onToggleSelection={handleToggleSelection}
-              onSelectAll={handleSelectAll}
-              onClearSelection={handleClearSelection}
-              onBulkDelete={handleBulkDelete}
-              onBulkDownload={handleBulkDownload}
-              onBulkMove={handleBulkMove}
-              folders={folders}
-              activeFolderId={activeFolderId}
-              scrollElementRef={scrollRootRef}
-              disableVirtualization={true}
-            />
+            {/* Files inside the current virtual folder */}
+            {(virtualView.files.length > 0 || virtualView.folders.length === 0 || (isLoading && allFiles.length === 0)) && (
+              <TouchFileList
+                files={virtualView.files}
+                isLoading={isLoading && allFiles.length === 0}
+                onDownload={handleDownload}
+                onDelete={handleDeleteFile}
+                onPreview={handlePreview}
+                onRename={handleRenameFile}
+                onShare={setShareFile}
+                onCopyTelegramLink={handleCopyTelegramLink}
+                onKeepOffline={handleKeepOffline}
+                onRemoveOffline={handleRemoveOffline}
+                onBulkShare={handleBulkShare}
+                selectedIds={selectedIds}
+                onToggleSelection={handleToggleSelection}
+                onSelectAll={handleSelectVisible}
+                onClearSelection={handleClearSelection}
+                onBulkDelete={handleBulkDelete}
+                onBulkDownload={handleBulkDownload}
+                onBulkMove={handleBulkMove}
+                folders={folders}
+                activeFolderId={activeFolderId}
+                scrollElementRef={scrollRootRef}
+                disableVirtualization={true}
+              />
+            )}
           </div>
         )}
 

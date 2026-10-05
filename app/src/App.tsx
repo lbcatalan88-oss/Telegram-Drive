@@ -9,6 +9,7 @@ import { usePlatform } from "./hooks/usePlatform";
 import "./App.css";
 
 const DesktopDashboard = React.lazy(() => import("./components/desktop/DesktopDashboard").then(m => ({ default: m.Dashboard })));
+const MobileDashboard = React.lazy(() => import("./components/mobile/MobileDashboard"));
 const AuthWizard = React.lazy(() => import("./components/shared/AuthWizard").then(m => ({ default: m.AuthWizard })));
 const AdGateway = React.lazy(() => import("./components/shared/AdGateway").then(m => ({ default: m.AdGateway })));
 // Vite requires a fully static import path for dynamic imports so it can
@@ -62,7 +63,7 @@ function AppContent() {
   const [whatsNew, setWhatsNew] = useState<WhatsNewDetails | null>(() => consumeWhatsNew(appVersion));
   const { theme } = useTheme();
   const { available, version, downloading, progress, phase, managedByPackageManager, downloadAndInstall, dismissUpdate } = useUpdates();
-  const { isTelevision } = usePlatform();
+  const { isMobile, isTelevision } = usePlatform();
   useTvSpatialNavigation(isTelevision);
   const { settings, updateSetting, isLoaded, persistenceStatus, retryPersistence } = useSettings();
   const { status: supporterStatus } = useSupporter();
@@ -299,7 +300,11 @@ function AppContent() {
           </div>
         }>
           <ErrorBoundary>
-            <DesktopDashboard onLogout={() => setAuthStatus("unauthenticated")} />
+            {isMobile && !isTelevision ? (
+              <MobileDashboard onLogout={() => setAuthStatus("unauthenticated")} />
+            ) : (
+              <DesktopDashboard onLogout={() => setAuthStatus("unauthenticated")} />
+            )}
           </ErrorBoundary>
         </Suspense>
       )}
