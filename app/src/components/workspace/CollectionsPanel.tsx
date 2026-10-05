@@ -1,7 +1,7 @@
 import { useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { Folder, Heart, Plane, Briefcase, Film, BookOpen, Pencil, Plus, Trash2 } from 'lucide-react';
-import type { Collection, SavedSearch, WorkspaceFile, WorkspaceMutation } from '../../services/workspace';
+import { isSmartCollectionId, type Collection, type SavedSearch, type WorkspaceFile, type WorkspaceMutation } from '../../services/workspace';
 import { WorkspaceThumbnail } from './MediaTimeline';
 
 export const collectionIcons = { folder: Folder, heart: Heart, plane: Plane, briefcase: Briefcase, film: Film, book: BookOpen };
@@ -25,8 +25,11 @@ export function CollectionsPanel({ ownerId, files, collections, searches, active
         <ul className="space-y-1">{collections.map(collection => {
             const Icon = collectionIcons[collection.icon as keyof typeof collectionIcons] || Folder;
             const cover = files.find(file => file.key === collection.coverKey);
+            const count = files.filter(file => file.collectionIds.includes(collection.id)).length;
             return <li key={collection.id} className="flex min-w-0 gap-1"><button type="button" aria-pressed={active === collection.id} onClick={() => onSelect(collection.id)} className={`flex min-h-11 min-w-0 flex-1 items-center gap-2 rounded-xl px-3 text-start text-sm ${active === collection.id ? 'bg-telegram-primary/15' : 'hover:bg-telegram-hover'}`}>
-                {cover ? <span className="h-9 w-12 shrink-0 overflow-hidden rounded-lg" data-testid={`collection-cover-${collection.id}`}><WorkspaceThumbnail ownerId={ownerId} file={cover} /></span> : <Icon className="h-4 w-4 shrink-0" style={{ color: collectionColors[collection.color as keyof typeof collectionColors] }} />}<span className="truncate">{collection.name}</span></button><button type="button" aria-label={t('workspace.edit_collection', { name: collection.name })} onClick={() => setEditing(collection)} className="min-h-11 min-w-11 rounded-xl hover:bg-telegram-hover"><Pencil className="mx-auto h-3.5 w-3.5" /></button></li>;
+                {cover ? <span className="h-9 w-12 shrink-0 overflow-hidden rounded-lg" data-testid={`collection-cover-${collection.id}`}><WorkspaceThumbnail ownerId={ownerId} file={cover} /></span> : <Icon className="h-4 w-4 shrink-0" style={{ color: collectionColors[collection.color as keyof typeof collectionColors] }} />}
+                <span className="min-w-0 flex-1 truncate">{collection.name}</span><span className="shrink-0 rounded-full bg-telegram-hover px-2 py-0.5 text-[11px] text-telegram-subtext">{count}</span>
+            </button>{!isSmartCollectionId(collection.id) && <button type="button" aria-label={t('workspace.edit_collection', { name: collection.name })} onClick={() => setEditing(collection)} className="min-h-11 min-w-11 rounded-xl hover:bg-telegram-hover"><Pencil className="mx-auto h-3.5 w-3.5" /></button>}</li>;
         })}</ul>
         {editing && <form onSubmit={event => { event.preventDefault(); void perform(async () => { await mutate({ type: 'save_collection', collection: { ...editing, name: editing.name.trim() } }); onSelect(editing.id); setEditing(null); }); }} className="space-y-3 rounded-xl border border-telegram-border p-3">
             <label className="block text-xs">{t('common.name')}<input autoFocus required maxLength={120} value={editing.name} onChange={event => setEditing({ ...editing, name: event.target.value })} className={`${control} mt-1`} /></label>

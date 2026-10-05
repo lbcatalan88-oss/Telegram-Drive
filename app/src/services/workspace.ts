@@ -31,13 +31,94 @@ export type WorkspaceMutation =
     | { type: 'remove_search'; id: string }
     | { type: 'favorite'; key: string; value: boolean };
 
+type SmartCollectionRule = {
+    key: string;
+    name: string;
+    color: Collection['color'];
+    icon: Collection['icon'];
+    prefixes: string[];
+};
+
+export const SMART_COLLECTION_RULES: SmartCollectionRule[] = [
+    { key: 'GLO', name: 'GLO', color: 'violet', icon: 'heart', prefixes: ['GLO_'] },
+    { key: 'KAT', name: 'KAT', color: 'rose', icon: 'heart', prefixes: ['KAT_'] },
+    { key: 'FAMOSAS_CHILE', name: 'Famosas Chile', color: 'amber', icon: 'film', prefixes: ['FAMOSAS_CHILE_'] },
+    { key: 'SCREENSHOTS', name: 'Screenshots', color: 'blue', icon: 'folder', prefixes: ['SCREENSHOTS_'] },
+    { key: 'DOWNLOAD', name: 'Descargas', color: 'green', icon: 'folder', prefixes: ['DOWNLOAD_'] },
+    { key: 'CONTENIDO', name: 'Contenido', color: 'violet', icon: 'film', prefixes: ['CONTENIDO_'] },
+    { key: 'FACEBOOK', name: 'Facebook', color: 'blue', icon: 'folder', prefixes: ['FACEBOOK_'] },
+    { key: 'REMINI', name: 'Remini', color: 'amber', icon: 'film', prefixes: ['REMINI_'] },
+    { key: 'PHOTOROOM', name: 'PhotoRoom', color: 'rose', icon: 'film', prefixes: ['PHOTOROOM_'] },
+    { key: 'PHOTODIRECTOR', name: 'PhotoDirector', color: 'violet', icon: 'film', prefixes: ['PHOTODIRECTOR_'] },
+    { key: 'CANVA', name: 'Canva', color: 'blue', icon: 'film', prefixes: ['CANVA_'] },
+    { key: 'CAVE', name: 'Cave', color: 'slate', icon: 'folder', prefixes: ['CAVE_'] },
+    { key: 'CAROLA', name: 'Carola', color: 'rose', icon: 'heart', prefixes: ['CAROLA_'] },
+];
+
+export function isSmartCollectionId(id: string): boolean {
+    return id.startsWith('smart:');
+}
+
+function normalizedCollectionKey(value: string): string {
+    return value
+        .normalize('NFD')
+        .replace(/[\u0300-\u036f]/g, '')
+        .toUpperCase()
+        .replace(/[^A-Z0-9]+/g, '_')
+        .replace(/^_+|_+$/g, '');
+}
+
+function smartRuleForCollection(collection: Collection): SmartCollectionRule | undefined {
+    const key = normalizedCollectionKey(collection.name);
+    return SMART_COLLECTION_RULES.find(rule => rule.key === key);
+}
+
+function fileMatchesRule(file: WorkspaceFile, rule: SmartCollectionRule): boolean {
+    const name = String(file.name || '').toUpperCase();
+    return rule.prefixes.some(prefix => name.startsWith(prefix.toUpperCase()));
+}
+
 function normalize(snapshot: WorkspaceSnapshot, ownerId: string): WorkspaceSnapshot {
     if (snapshot.ownerId !== ownerId) throw new Error('ACCOUNT_CHANGED');
-    return { ...snapshot,
-        files: snapshot.files.map(file => ({ ...file, ...normalizeListedFile(file) })),
-        searches: snapshot.searches.map(search => ({ ...search,
-            filters: { ...DEFAULT_SEARCH_FILTERS, ...search.filters }, tags: search.tags ?? [],
-            folderKey: search.folderKey ?? null, collectionId: search.collectionId ?? null,
+
+    const existingCollections = snapshot.collections ?? [];
+    const collections = [...existingCollections];
+
+    for (const rule of SMART_COLLECTION_RULES) {
+        const alreadyExists = existingCollections.some(collection => normalizedCollectionKey(collection.name) === rule.key);
+        if (!alreadyExists) {
+            collections.push({
+                id: `smart:${rule.key}`,
+                name: rule.name,
+                color: rule.color,
+                icon: rule.icon,
+                coverKey: null,
+            });
+        }
+    }
+
+    const files = snapshot.files.map(file => {
+        const normalized = { ...file, ...normalizeListedFile(file) } as WorkspaceFile;
+        const automaticIds = collections.flatMap(collection => {
+            const rule = smartRuleForCollection(collection);
+            return rule && fileMatchesRule(normalized, rule) ? [collection.id] : [];
+        });
+        return {
+            ...normalized,
+            collectionIds: [...new Set([...(normalized.collectionIds ?? []), ...automaticIds])],
+        };
+    });
+
+    return {
+        ...snapshot,
+        files,
+        collections,
+        searches: snapshot.searches.map(search => ({
+            ...search,
+            filters: { ...DEFAULT_SEARCH_FILTERS, ...search.filters },
+            tags: search.tags ?? [],
+            folderKey: search.folderKey ?? null,
+            collectionId: search.collectionId ?? null,
             favoritesOnly: search.favoritesOnly ?? false,
         })),
     };
