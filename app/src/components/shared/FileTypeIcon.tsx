@@ -3,6 +3,7 @@ import {
     FileArchive, FileCode, FileSpreadsheet, Presentation,
     FileType
 } from 'lucide-react';
+import { getFileExtension } from '../../utils/files';
 
 const extensionMap: Record<string, { icon: typeof File; color: string }> = {
     // Images
@@ -69,7 +70,7 @@ const extensionMap: Record<string, { icon: typeof File; color: string }> = {
 };
 
 export function getFileTypeInfo(filename: string): { icon: typeof File; color: string } {
-    const ext = filename.split('.').pop()?.toLowerCase() || '';
+    const ext = getFileExtension(filename);
     return extensionMap[ext] || { icon: File, color: 'text-telegram-subtext' };
 }
 

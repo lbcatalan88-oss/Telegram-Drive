@@ -6,15 +6,11 @@ import { loadThumbnail, getCachedThumbnail } from '../../services/imagePreviewCa
 import { ActionPopover, ActionItem } from './ActionPopover';
 import { TelegramFile, TelegramFolder } from '../../types';
 import i18n from '../../i18n';
+import { isImageFile } from '../../utils/files';
 
-
-const FMPLUS_IMAGE_EXTS = new Set([
-  'jpg','jpeg','png','webp','gif','bmp'
-]);
 
 function isFmPlusImage(filename: string) {
-  const ext = filename.split('.').pop()?.toLowerCase() || '';
-  return FMPLUS_IMAGE_EXTS.has(ext);
+  return isImageFile(filename);
 }
 
 function FileManagerThumbnail({

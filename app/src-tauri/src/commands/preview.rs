@@ -212,9 +212,7 @@ async fn mark_cache_file_used(path: PathBuf) {
 fn media_extension(media: &Media) -> String {
     let extension = match media {
         Media::Document(document) => {
-            let from_name = Path::new(document.name())
-                .extension()
-                .map(|value| value.to_string_lossy().to_lowercase())
+            let from_name = super::fs::file_extension_from_name(document.name())
                 .unwrap_or_default();
             if !from_name.is_empty() {
                 from_name

@@ -1,6 +1,7 @@
 export { isAndroidPlatform } from './utils/platform';
 export {
   formatBytes,
+  getFileExtension,
   isArchiveFile,
   isAudioFile,
   isImageFile,
@@ -11,6 +12,7 @@ export {
   isVideoFile,
   isZipFile,
   sanitizeFilename,
+  stripLegacyTdMetadata,
 } from './utils/files';
 export {
   pickWithFallback,

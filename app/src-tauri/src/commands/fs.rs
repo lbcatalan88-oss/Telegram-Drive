@@ -393,13 +393,54 @@ impl ListingHeaderBudget {
     }
 }
 
-fn inferred_mime_type(path: &str) -> &'static str {
-    match std::path::Path::new(path)
+const LEGACY_TD_METADATA_MARKERS: &[&str] = &[
+    "ORIGEN:", "ORIGIN:", "TIPO_VISUAL:", "VISUAL_TYPE:",
+    "SOFTWARE_ORIGEN:", "SOFTWARE_ORIGIN:", "DIMENSIONES:", "DIMENSIONS:",
+    "RESOLUCION:", "RESOLUTION:", "DURACION:", "DURATION:",
+    "FECHA_ORIGEN:", "ORIGINAL_DATE:", "DISPOSITIVO:", "DEVICE:",
+    "MODELO:", "MODEL:", "ANCHO:", "WIDTH:", "ALTO:", "HEIGHT:",
+    "HASH:", "SHA256:", "MD5:", "TAGS:", "FUENTE:", "SOURCE:",
+    "RUTA_ORIGEN:", "ORIGINAL_PATH:", "MIME:", "MIME_TYPE:",
+];
+
+fn legacy_td_metadata_cut(name: &str) -> Option<usize> {
+    let upper = name.to_ascii_uppercase();
+    let mut best: Option<usize> = None;
+    for marker in LEGACY_TD_METADATA_MARKERS {
+        let mut offset = 0usize;
+        while offset < upper.len() {
+            let Some(relative) = upper[offset..].find(marker) else { break; };
+            let position = offset + relative;
+            let preceded_by_whitespace = position > 0
+                && upper[..position].chars().next_back().is_some_and(char::is_whitespace);
+            if preceded_by_whitespace && name[..position].contains('.') {
+                best = Some(best.map_or(position, |current| current.min(position)));
+                break;
+            }
+            offset = position.saturating_add(marker.len());
+        }
+    }
+    best
+}
+
+pub(crate) fn strip_legacy_td_metadata(name: &str) -> String {
+    let cut = legacy_td_metadata_cut(name).unwrap_or(name.len());
+    name[..cut].trim().to_string()
+}
+
+pub(crate) fn file_extension_from_name(name: &str) -> Option<String> {
+    let cleaned = strip_legacy_td_metadata(name);
+    std::path::Path::new(&cleaned)
         .extension()
         .and_then(|extension| extension.to_str())
-        .unwrap_or_default()
-        .to_ascii_lowercase()
-        .as_str()
+        .map(|extension| extension.to_ascii_lowercase())
+        .filter(|extension| !extension.is_empty()
+            && extension.len() <= 12
+            && extension.chars().all(|character| character.is_ascii_alphanumeric()))
+}
+
+fn inferred_mime_type(path: &str) -> &'static str {
+    match file_extension_from_name(path).as_deref()
     {
         "jpg" | "jpeg" => "image/jpeg",
         "png" => "image/png",
@@ -3773,16 +3814,15 @@ pub async fn cmd_get_files(
                         // Prefer the message caption (set by rename via EditMessage) over the
                         // document's built-in filename attribute, so renames persist across refreshes.
                         let caption = msg.text();
-                        let display_name = if caption.is_empty() {
+                        let raw_display_name = if caption.is_empty() {
                             doc_name.clone()
                         } else {
                             caption.to_string()
                         };
+                        let display_name = strip_legacy_td_metadata(&raw_display_name);
                         let m = d.mime_type().map(|s| s.to_string());
-                        // Extension always from the original document name for correct file-type icon
-                        let e = std::path::Path::new(&doc_name)
-                            .extension()
-                            .map(|os| os.to_str().unwrap_or("").to_string());
+                        let e = file_extension_from_name(&doc_name)
+                            .or_else(|| file_extension_from_name(&display_name));
                         (display_name, declared_size, m, e, doc_name)
                     }
                     Media::Photo(_) => (
@@ -3885,10 +3925,7 @@ pub async fn cmd_get_files(
                                     {
                                         name = metadata.original_name;
                                         mime = Some(metadata.mime_type);
-                                        ext = std::path::Path::new(&name)
-                                            .extension()
-                                            .and_then(|value| value.to_str())
-                                            .map(str::to_string);
+                                        ext = file_extension_from_name(&name);
                                     }
                                 }
                             }
@@ -4066,17 +4103,17 @@ fn extract_search_files(msgs: &[tl::enums::Message], owner: i64) -> Vec<FileMeta
                             _ => None,
                         })
                         .unwrap_or("Unknown".to_string());
-                    // Prefer the message caption over the built-in document filename
-                    let name = if m.message.is_empty() {
+                    // Prefer the message caption, while hiding legacy TD metadata.
+                    let raw_name = if m.message.is_empty() {
                         doc_name.clone()
                     } else {
                         m.message.clone()
                     };
+                    let name = strip_legacy_td_metadata(&raw_name);
                     let size = doc.size as u64;
                     let mime = doc.mime_type.clone();
-                    let ext = std::path::Path::new(&doc_name)
-                        .extension()
-                        .map(|os| os.to_str().unwrap_or("").to_string());
+                    let ext = file_extension_from_name(&doc_name)
+                        .or_else(|| file_extension_from_name(&name));
                     let folder_id = search_source_folder(&m.peer_id, owner);
                     files.push(FileMetadata {
                         id: m.id as i64,

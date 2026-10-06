@@ -1,5 +1,6 @@
 import { FolderOpen, ChevronRight, ArrowLeft } from 'lucide-react';
 import type { TelegramFile } from '../../types';
+import { getFileExtension, stripLegacyTdMetadata } from '../../utils/files';
 
 export interface VirtualFolderInfo {
   name: string;
@@ -14,7 +15,7 @@ export interface VirtualFolderView {
 }
 
 function cleanStoredPath(name: string) {
-  return name
+  return stripLegacyTdMetadata(name)
     .replace(/^\s*[📁🗂️]+\s*/u, '')
     .replace(/\\/g, '/')
     .replace(/^\/+/, '')
@@ -23,7 +24,7 @@ function cleanStoredPath(name: string) {
 }
 
 function kindForName(name: string) {
-  const ext = name.split('.').pop()?.toLowerCase() || '';
+  const ext = getFileExtension(name);
   if (['jpg', 'jpeg', 'png', 'webp', 'gif', 'bmp', 'heic'].includes(ext)) return 'Fotos';
   if (['mp4', 'mkv', 'webm', 'mov', 'avi', 'm4v'].includes(ext)) return 'Videos';
   if (['mp3', 'm4a', 'flac', 'wav', 'ogg', 'aac'].includes(ext)) return 'Audio';

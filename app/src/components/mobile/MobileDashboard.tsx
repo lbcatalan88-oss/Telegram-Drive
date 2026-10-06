@@ -23,7 +23,7 @@ import { useTelegramConnection } from '../../hooks/useTelegramConnection';
 import { useFileUpload } from '../../hooks/useFileUpload';
 import { useFileDownload } from '../../hooks/useFileDownload';
 import { useFileOperations } from '../../hooks/useFileOperations';
-import { formatBytes, isMediaFile, isPdfFile, isImageFile, nativeShareOrCopy, copyToClipboard } from '../../utils';
+import { formatBytes, isMediaFile, isPdfFile, isImageFile, stripLegacyTdMetadata, nativeShareOrCopy, copyToClipboard } from '../../utils';
 import { LazyFeatureBoundary } from '../shared/LazyFeatureBoundary';
 import { useTheme } from '../../context/ThemeContext';
 import { TelegramFile, TelegramFolder, ShareInfo, BandwidthStats } from '../../types';
@@ -699,7 +699,7 @@ export default function MobileDashboard({ onLogout }: { onLogout?: () => void })
   }, []);
 
   const handleDownload = useCallback((file: TelegramFile) => {
-    queueDownload(file.id, file.name, activeFolderId);
+    queueDownload(file.id, stripLegacyTdMetadata(file.name), file.folder_id ?? activeFolderId);
   }, [queueDownload, activeFolderId]);
 
   const handleDeleteFile = useCallback((file: TelegramFile) => {
@@ -709,12 +709,12 @@ export default function MobileDashboard({ onLogout }: { onLogout?: () => void })
   const handlePreview = useCallback((file: TelegramFile) => {
     if (isMediaFile(file.name, file.mime_type)) {
       setPlayingFile(file);
-    } else if (isPdfFile(file.name)) {
+    } else if (isPdfFile(file.name, file.mime_type)) {
       setPdfFile(file);
-    } else if (isImageFile(file.name)) {
+    } else if (isImageFile(file.name, file.mime_type)) {
       setPreviewFile(file);
     } else {
-      toast.info(`Preview not supported for ${file.name}`);
+      toast.info(`Preview not supported for ${stripLegacyTdMetadata(file.name)}`);
     }
   }, []);
 
