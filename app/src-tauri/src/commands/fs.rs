@@ -440,8 +440,8 @@ pub(crate) fn file_extension_from_name(name: &str) -> Option<String> {
 }
 
 fn inferred_mime_type(path: &str) -> &'static str {
-    match file_extension_from_name(path).as_deref()
-    {
+    match file_extension_from_name(path).as_deref().unwrap_or_default() {
+
         "jpg" | "jpeg" => "image/jpeg",
         "png" => "image/png",
         "gif" => "image/gif",
